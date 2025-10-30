@@ -41,7 +41,7 @@ def generate_launch_description():
         ],
         parameters=[
             {'marker_size_mm': 10.0},
-            {'camera_matrix': [600.0, 0.0, 320.0, 0.0, 600.0, 240.0, 0.0, 0.0, 1.0]},
+            {'camera_matrix': [600.0, 320.0, 600.0, 240.0]}, #fx, cx, fy, cy
             {'distortion_matrix': [0.0, 0.0, 0.0, 0.0, 0.0]},
         ]
     )

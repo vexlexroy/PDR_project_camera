@@ -13,7 +13,7 @@ class GtTester(Node):
         super().__init__('gt_video_test')
         self.declare_parameter('distortion_matrix', [0.0, 0.0, 0.0, 0.0, 0.0])
         self.cam_distortion_in = self.get_parameter('distortion_matrix').value
-        self.declare_parameter('camera_matrix', [0.0]*9)
+        self.declare_parameter('camera_matrix', [0.0]*4)
         self.cam_matrix_in = self.get_parameter('camera_matrix').value
         self.declare_parameter('marker_size_mm', 10.0)
         self.marker_size_mm = self.get_parameter('marker_size_mm').value
