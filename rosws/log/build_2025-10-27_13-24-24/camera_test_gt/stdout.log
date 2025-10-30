@@ -1,0 +1,36 @@
+running egg_info
+creating ../../build/camera_test_gt/camera_test_gt.egg-info
+writing ../../build/camera_test_gt/camera_test_gt.egg-info/PKG-INFO
+writing dependency_links to ../../build/camera_test_gt/camera_test_gt.egg-info/dependency_links.txt
+writing requirements to ../../build/camera_test_gt/camera_test_gt.egg-info/requires.txt
+writing top-level names to ../../build/camera_test_gt/camera_test_gt.egg-info/top_level.txt
+writing manifest file '../../build/camera_test_gt/camera_test_gt.egg-info/SOURCES.txt'
+reading manifest file '../../build/camera_test_gt/camera_test_gt.egg-info/SOURCES.txt'
+writing manifest file '../../build/camera_test_gt/camera_test_gt.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build
+creating /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build/lib
+creating /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build/lib/camera_test_gt
+copying camera_test_gt/__init__.py -> /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build/lib/camera_test_gt
+copying camera_test_gt/gt_test_detector_node.py -> /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build/lib/camera_test_gt
+copying camera_test_gt/camera_pub_node.py -> /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build/lib/camera_test_gt
+running install
+running install_lib
+creating /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt
+copying /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build/lib/camera_test_gt/__init__.py -> /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt
+copying /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build/lib/camera_test_gt/gt_test_detector_node.py -> /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt
+copying /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build/lib/camera_test_gt/camera_pub_node.py -> /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt
+byte-compiling /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt/gt_test_detector_node.py to gt_test_detector_node.cpython-312.pyc
+byte-compiling /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt/camera_pub_node.py to camera_pub_node.cpython-312.pyc
+running install_data
+creating /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/share/ament_index
+creating /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/share/ament_index/resource_index
+creating /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/share/ament_index/resource_index/packages
+copying resource/camera_test_gt -> /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/share/ament_index/resource_index/packages
+copying package.xml -> /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/share/camera_test_gt
+running install_egg_info
+Copying ../../build/camera_test_gt/camera_test_gt.egg-info to /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt-0.0.0-py3.12.egg-info
+running install_scripts
+writing list of installed files to '/home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/install.log'

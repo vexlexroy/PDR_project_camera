@@ -1,0 +1,23 @@
+[0.676s] Invoking command in '/home/leonardo/Diplomski/Odometry/rosws/src/camera_test_gt': PYTHONPATH=/home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/camera_test_gt build --build-base /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build install --record /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/install.log --single-version-externally-managed install_data
+[0.892s] running egg_info
+[0.908s] writing ../../build/camera_test_gt/camera_test_gt.egg-info/PKG-INFO
+[0.908s] writing dependency_links to ../../build/camera_test_gt/camera_test_gt.egg-info/dependency_links.txt
+[0.908s] writing entry points to ../../build/camera_test_gt/camera_test_gt.egg-info/entry_points.txt
+[0.908s] writing requirements to ../../build/camera_test_gt/camera_test_gt.egg-info/requires.txt
+[0.909s] writing top-level names to ../../build/camera_test_gt/camera_test_gt.egg-info/top_level.txt
+[0.942s] reading manifest file '../../build/camera_test_gt/camera_test_gt.egg-info/SOURCES.txt'
+[0.943s] writing manifest file '../../build/camera_test_gt/camera_test_gt.egg-info/SOURCES.txt'
+[0.943s] running build
+[0.943s] running build_py
+[0.943s] running install
+[0.951s] running install_lib
+[0.968s] byte-compiling /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt/gt_test_detector_node.py to gt_test_detector_node.cpython-312.pyc
+[0.969s] running install_data
+[0.969s] running install_egg_info
+[0.987s] removing '/home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt-0.0.0-py3.12.egg-info' (and everything under it)
+[0.987s] Copying ../../build/camera_test_gt/camera_test_gt.egg-info to /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt-0.0.0-py3.12.egg-info
+[0.988s] running install_scripts
+[1.100s] Installing camera_pub_node script to /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/camera_test_gt
+[1.100s] Installing gt_test_detector_node script to /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/camera_test_gt
+[1.100s] writing list of installed files to '/home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/install.log'
+[1.137s] Invoked command in '/home/leonardo/Diplomski/Odometry/rosws/src/camera_test_gt' returned '0': PYTHONPATH=/home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/camera_test_gt build --build-base /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/build install --record /home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/install.log --single-version-externally-managed install_data

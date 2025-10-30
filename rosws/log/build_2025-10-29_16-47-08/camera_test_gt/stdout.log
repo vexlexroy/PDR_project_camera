@@ -1,0 +1,21 @@
+running egg_info
+writing ../../build/camera_test_gt/camera_test_gt.egg-info/PKG-INFO
+writing dependency_links to ../../build/camera_test_gt/camera_test_gt.egg-info/dependency_links.txt
+writing entry points to ../../build/camera_test_gt/camera_test_gt.egg-info/entry_points.txt
+writing requirements to ../../build/camera_test_gt/camera_test_gt.egg-info/requires.txt
+writing top-level names to ../../build/camera_test_gt/camera_test_gt.egg-info/top_level.txt
+reading manifest file '../../build/camera_test_gt/camera_test_gt.egg-info/SOURCES.txt'
+writing manifest file '../../build/camera_test_gt/camera_test_gt.egg-info/SOURCES.txt'
+running build
+running build_py
+running install
+running install_lib
+running install_data
+copying launch/gt_test.launch.py -> /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/share/camera_test_gt/launch
+running install_egg_info
+removing '/home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt-0.0.0-py3.12.egg-info' (and everything under it)
+Copying ../../build/camera_test_gt/camera_test_gt.egg-info to /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/python3.12/site-packages/camera_test_gt-0.0.0-py3.12.egg-info
+running install_scripts
+Installing camera_pub_node script to /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/camera_test_gt
+Installing gt_test_detector_node script to /home/leonardo/Diplomski/Odometry/rosws/install/camera_test_gt/lib/camera_test_gt
+writing list of installed files to '/home/leonardo/Diplomski/Odometry/rosws/build/camera_test_gt/install.log'
