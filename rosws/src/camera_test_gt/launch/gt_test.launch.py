@@ -18,21 +18,21 @@ def generate_launch_description():
     )
 
     camera_pub = Node(
-        package='camera_test_gt',        # ← your camera node’s package name
-        executable='camera_pub_node',         # ← your camera node’s executable
+        package='camera_test_gt',        #camera node’s package name
+        executable='camera_pub_node',         #camera node’s executable
         name='camera_pub_node',
         output='screen',
         parameters=[{
             'camera_source': LaunchConfiguration('camera_source')
         }],
         remappings=[
-            ('/camera/image_raw', '/gt_test/image_raw')  # example: publish to /gt_test/image_raw
+            ('/camera/image_raw', '/gt_test/image_raw')
         ]
     )
 
     gt_tester = Node(
-        package='camera_test_gt',     # ← your package name
-        executable='gt_test_detector_node',      # ← the name in your setup.py entry_point
+        package='camera_test_gt',     # package name
+        executable='gt_test_detector_node',
         name='gt_test_node',
         output='screen',
         remappings=[
@@ -41,7 +41,7 @@ def generate_launch_description():
         ],
         parameters=[
             {'marker_size_mm': 10.0},
-            {'camera_matrix': [600.0, 320.0, 600.0, 240.0]}, #fx, cx, fy, cy
+            {'camera_matrix': [600.0, 320.0, 600.0, 240.0]}, # fx, cx, fy, cy
             {'distortion_matrix': [0.0, 0.0, 0.0, 0.0, 0.0]},
         ]
     )
