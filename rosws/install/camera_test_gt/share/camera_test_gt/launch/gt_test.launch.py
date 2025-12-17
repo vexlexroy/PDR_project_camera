@@ -38,7 +38,9 @@ def generate_launch_description():
         output='screen',
         remappings=[
             ('/capture', '/gt_test/image_raw'),   # subscribe to camera pub output
-            ('/camera_pose', '/gt_test/camera_pose')       # pose output topic
+            ('/camera_pose', '/gt_test/camera_pose'),       # pose output topic
+            ('/marker_image', '/gt_test/marker_image'),
+            ('/camera_path', '/gt_test/camera_path')
         ],
         parameters=[config_file] # <-- load from YAML
     )

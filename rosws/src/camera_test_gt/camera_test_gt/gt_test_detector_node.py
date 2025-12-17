@@ -1,7 +1,8 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Path
 from cv_bridge import CvBridge
 from scipy.spatial.transform import Rotation as R
 import cv2
@@ -17,6 +18,8 @@ class GtTester(Node):
         self.cam_matrix_in = self.get_parameter('camera_matrix').value
         self.declare_parameter('marker_size_mm', 10.0)
         self.marker_size_mm = self.get_parameter('marker_size_mm').value
+        self.declare_parameter('testing', True)
+        self.marker_size_mm = self.get_parameter('testing').value
 
         self.camera_matrix=np.array([
                           [self.cam_matrix_in[0], 0.0, self.cam_matrix_in[2]],# fx, 0, cx
@@ -25,7 +28,7 @@ class GtTester(Node):
                           ], dtype=np.float32)
         self.distortion_matrix=np.array(self.cam_distortion_in, dtype=np.float32)
 
-        self.last_cam_pose:Pose=None
+        self.last_cam_pose:PoseStamped=None
         self.last_world_cam_T=None
         self.last_frames:list[Image]=[]
 
@@ -34,6 +37,8 @@ class GtTester(Node):
         self.detector=cv2.aruco.ArucoDetector(dictionary=self.aruco_dict,detectorParams=self.parameters)
         self.bridge = CvBridge()
 
+        self.marker_image=None
+
         self.image_sub = self.create_subscription(
             Image,
             '/capture',
@@ -41,7 +46,12 @@ class GtTester(Node):
             10
         )
 
-        self.camera_pose = self.create_publisher(Pose, '/camera_pose', 10)
+        self.camera_pose = self.create_publisher(PoseStamped, '/camera_pose', 10)
+        self.marker_image_pub = self.create_publisher(Image, '/marker_image', 10)
+
+        self.path_pub = self.create_publisher(Path, '/camera_path', 10)
+        self.camera_path = Path()
+        self.camera_path.header.frame_id = 'world'
 
     def proces_images(self,image_msg:Image): 
         '''gets new image and calculates new camera position
@@ -57,16 +67,21 @@ class GtTester(Node):
             corners2, ids2, rejected2 = self.detector.detectMarkers(gray_old)
         corners, ids, rejected = self.detector.detectMarkers(gray)
         if(self.last_cam_pose==None and ids is not None and len(ids) > 0):
-            self.last_cam_pose=Pose()
-            self.last_cam_pose.position.x=0
-            self.last_cam_pose.position.y=0
-            self.last_cam_pose.position.z=0
-            self.last_cam_pose.orientation.x=0
-            self.last_cam_pose.orientation.y=0
-            self.last_cam_pose.orientation.z=0
+            self.last_cam_pose=PoseStamped()
+            self.last_cam_pose.pose.position.x=0
+            self.last_cam_pose.pose.position.y=0
+            self.last_cam_pose.pose.position.z=0
+            self.last_cam_pose.pose.orientation.x=0
+            self.last_cam_pose.pose.orientation.y=0
+            self.last_cam_pose.pose.orientation.z=0
+            self.last_cam_pose.header.stamp = self.get_clock().now().to_msg()
+            self.last_cam_pose.header.frame_id = 'origin'
 
             self.last_world_cam_T=np.eye(4)
             self.last_frames.append(image_msg)
+            cv2.aruco.drawDetectedMarkers(gray,corners,ids)
+            self.marker_image = self.bridge.cv2_to_imgmsg(gray, 'mono8')
+            self.marker_image_pub.publish(self.marker_image)
             return
         else:
             if(ids is not None and len(ids) > 0):
@@ -78,8 +93,6 @@ class GtTester(Node):
                 
                 if(len(matches)<=0):
                     return
-
-
 
                 rvecs, tvecs, _ = self.estimatePoseSingleMarker(
                     corners, self.marker_size_mm/1000, self.camera_matrix, self.distortion_matrix
@@ -99,9 +112,19 @@ class GtTester(Node):
                 pose = self.matrix_to_pose(T_W_C2)
                 self.last_cam_pose=pose
                 self.camera_pose.publish(pose)
+                
+                pose_for_path = PoseStamped()
+                pose_for_path.header = pose.header
+                pose_for_path.pose = pose.pose
+                self.camera_path.header.stamp = self.get_clock().now().to_msg()
+                self.camera_path.poses.append(pose_for_path)
+                self.path_pub.publish(self.camera_path)
             # get last frame with detected markers,
             # and get average diference of orientation and distance change from all markers 
             # and generate new pose of camera from data (median of data would be nice) 
+            cv2.aruco.drawDetectedMarkers(gray,corners,ids)
+            self.marker_image = self.bridge.cv2_to_imgmsg(gray, 'mono8')
+            self.marker_image_pub.publish(self.marker_image)
             pass
 
 
@@ -143,18 +166,19 @@ class GtTester(Node):
             trash.append(nada)
         return np.array(rvecs), np.array(tvecs), trash
     
-    def matrix_to_pose(self, T: np.ndarray) -> Pose:
-        pose = Pose()
-        pose.position.x = float(T[0, 3])
-        pose.position.y = float(T[1, 3])
-        pose.position.z = float(T[2, 3])
-
+    def matrix_to_pose(self, T: np.ndarray) -> PoseStamped:
+        pose = PoseStamped()
+        pose.pose.position.x = float(T[0, 3])
+        pose.pose.position.y = float(T[1, 3])
+        pose.pose.position.z = float(T[2, 3])
+        pose.header.stamp = self.get_clock().now().to_msg()
+        pose.header.frame_id = 'world'
         rot = R.from_matrix(T[:3, :3])
         q = rot.as_quat()  # [x, y, z, w]
-        pose.orientation.x = float(q[0])
-        pose.orientation.y = float(q[1])
-        pose.orientation.z = float(q[2])
-        pose.orientation.w = float(q[3])
+        pose.pose.orientation.x = float(q[0])
+        pose.pose.orientation.y = float(q[1])
+        pose.pose.orientation.z = float(q[2])
+        pose.pose.orientation.w = float(q[3])
         return pose
 
 
