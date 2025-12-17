@@ -19,7 +19,9 @@ class GtTester(Node):
         self.declare_parameter('marker_size_mm', 10.0)
         self.marker_size_mm = self.get_parameter('marker_size_mm').value
         self.declare_parameter('testing', True)
-        self.marker_size_mm = self.get_parameter('testing').value
+        self.testing = self.get_parameter('testing').value
+        self.declare_parameter('max_path', 5000)
+        self.max_path = self.get_parameter('max_path').value
 
         self.camera_matrix=np.array([
                           [self.cam_matrix_in[0], 0.0, self.cam_matrix_in[2]],# fx, 0, cx
@@ -61,32 +63,41 @@ class GtTester(Node):
         '''
         frame= self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='bgr8')
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if(self.last_frames):
+        if(self.last_frames): # check if there is last frame, if there is compute marker poses againfor prev frame
             frame_old= self.bridge.imgmsg_to_cv2(self.last_frames[-1], desired_encoding='bgr8')
             gray_old = cv2.cvtColor(frame_old, cv2.COLOR_BGR2GRAY)
-            corners2, ids2, rejected2 = self.detector.detectMarkers(gray_old)
+            corners2, ids2, rejected2 = self.detector.detectMarkers(gray_old) # previous frame marker poses
         corners, ids, rejected = self.detector.detectMarkers(gray)
-        if(self.last_cam_pose==None and ids is not None and len(ids) > 0):
+        if(self.last_cam_pose==None and ids is not None and len(ids) > 0): #if this is first camera pose and ther is detection set initial pose
             self.last_cam_pose=PoseStamped()
-            self.last_cam_pose.pose.position.x=0
-            self.last_cam_pose.pose.position.y=0
-            self.last_cam_pose.pose.position.z=0
-            self.last_cam_pose.pose.orientation.x=0
-            self.last_cam_pose.pose.orientation.y=0
-            self.last_cam_pose.pose.orientation.z=0
+            self.last_cam_pose.pose.position.x=0.0
+            self.last_cam_pose.pose.position.y=0.0
+            self.last_cam_pose.pose.position.z=0.0
+            self.last_cam_pose.pose.orientation.x=0.0
+            self.last_cam_pose.pose.orientation.y=0.0
+            self.last_cam_pose.pose.orientation.z=0.0
+            self.last_cam_pose.pose.orientation.w=1.0
             self.last_cam_pose.header.stamp = self.get_clock().now().to_msg()
-            self.last_cam_pose.header.frame_id = 'origin'
+            self.last_cam_pose.header.frame_id = 'cam'
+            self.camera_pose.publish(self.last_cam_pose)
+            
+            pose_for_path = PoseStamped()
+            pose_for_path.header = self.last_cam_pose.header
+            pose_for_path.pose = self.last_cam_pose.pose
+            self.camera_path.header.stamp = self.get_clock().now().to_msg()
+            self.camera_path.poses.append(pose_for_path)
+            self.path_pub.publish(self.camera_path)
 
-            self.last_world_cam_T=np.eye(4)
-            self.last_frames.append(image_msg)
+            self.last_world_cam_T=np.eye(4) #set world relative pose 
+            self.last_frames=[image_msg]
             cv2.aruco.drawDetectedMarkers(gray,corners,ids)
             self.marker_image = self.bridge.cv2_to_imgmsg(gray, 'mono8')
             self.marker_image_pub.publish(self.marker_image)
             return
-        else:
+        else: # if no first frame and detected markers
             if(ids is not None and len(ids) > 0):
                 matches=[]
-                for i,id in enumerate(ids):
+                for i,id in enumerate(ids): # finds matching aruco marker detections by id
                     for j,id2 in enumerate(ids2):
                         if id==id2:
                             matches.append(tuple((i,j)))
@@ -172,7 +183,7 @@ class GtTester(Node):
         pose.pose.position.y = float(T[1, 3])
         pose.pose.position.z = float(T[2, 3])
         pose.header.stamp = self.get_clock().now().to_msg()
-        pose.header.frame_id = 'world'
+        pose.header.frame_id = 'cam'
         rot = R.from_matrix(T[:3, :3])
         q = rot.as_quat()  # [x, y, z, w]
         pose.pose.orientation.x = float(q[0])
