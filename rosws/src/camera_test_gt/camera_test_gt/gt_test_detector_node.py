@@ -62,10 +62,22 @@ class GtTester(Node):
         \npublishes new position of camera based on last 2 frames
         '''
         frame= self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='bgr8')
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        undistorted_image = cv2.undistort(
+            frame,
+            self.camera_matrix,
+            self.distortion_matrix
+        )
+
+        gray = cv2.cvtColor(undistorted_image, cv2.COLOR_BGR2GRAY)
         if(self.last_frames): # check if there is last frame, if there is compute marker poses againfor prev frame
             frame_old= self.bridge.imgmsg_to_cv2(self.last_frames[-1], desired_encoding='bgr8')
-            gray_old = cv2.cvtColor(frame_old, cv2.COLOR_BGR2GRAY)
+            undistorted_image_old = cv2.undistort(
+                frame_old,
+                self.camera_matrix,
+                self.distortion_matrix
+            )
+            gray_old = cv2.cvtColor(undistorted_image_old, cv2.COLOR_BGR2GRAY)
             corners2, ids2, rejected2 = self.detector.detectMarkers(gray_old) # previous frame marker poses
         corners, ids, rejected = self.detector.detectMarkers(gray)
         if(self.last_cam_pose==None and ids is not None and len(ids) > 0): #if this is first camera pose and ther is detection set initial pose
@@ -106,10 +118,10 @@ class GtTester(Node):
                     return
 
                 rvecs, tvecs, _ = self.estimatePoseSingleMarker(
-                    corners, self.marker_size_mm/1000, self.camera_matrix, self.distortion_matrix
+                    corners, self.marker_size_mm/1000, self.camera_matrix, np.zeros(5,1) #self.distortion_matrix
                 )
                 rvecs2, tvecs2, _ = self.estimatePoseSingleMarker(
-                    corners2, self.marker_size_mm/1000, self.camera_matrix, self.distortion_matrix
+                    corners2, self.marker_size_mm/1000, self.camera_matrix, np.zeros(5,1) #self.distortion_matrix
                 )
                 first_match=matches[0]
                 T_C1_M = self.make_transform(rvecs2[first_match[0]], tvecs2[first_match[0]])  # marker->camera1
@@ -129,6 +141,8 @@ class GtTester(Node):
                 pose_for_path.pose = pose.pose
                 self.camera_path.header.stamp = self.get_clock().now().to_msg()
                 self.camera_path.poses.append(pose_for_path)
+                if(len(self.camera_path.poses)>self.max_path):
+                    self.camera_path.poses.pop(0)
                 self.path_pub.publish(self.camera_path)
             # get last frame with detected markers,
             # and get average diference of orientation and distance change from all markers 

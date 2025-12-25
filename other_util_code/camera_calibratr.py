@@ -73,7 +73,12 @@ def main():
 
     print("Calibrating camera...")
 
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+    flags = (
+    cv2.CALIB_FIX_K3 |
+    cv2.CALIB_ZERO_TANGENT_DIST
+    )
+
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None, flags=flags)
     if not ret:
         print("Calibration failed.")
         return
@@ -85,6 +90,16 @@ def main():
     print("Camera matrix:\n", mtx)
     print("\nDistortion coefficients:\n", dist.ravel())
     print(f"\n[fx, cx, fy, cy] = [{fx:.3f}, {cx:.3f}, {fy:.3f}, {cy:.3f}]")
+
+    mean_error = 0
+    for i in range(len(objpoints)):
+        imgpoints2, _ = cv2.projectPoints(
+            objpoints[i], rvecs[i], tvecs[i], mtx, dist
+        )
+        error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
+        mean_error += error
+
+    print("Reprojection error:", mean_error / len(objpoints))
 
 if __name__ == '__main__':
     main()
