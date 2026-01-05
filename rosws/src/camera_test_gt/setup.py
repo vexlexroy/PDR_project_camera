@@ -32,6 +32,7 @@ setup(
         'console_scripts': [
             'camera_pub_node = camera_test_gt.camera_pub_node:main',
             'gt_test_detector_node = camera_test_gt.gt_test_detector_node:main',
+            'gt_test_detector_memory_node = camera_test_gt.gt_test_detector_memory_node:main',
         ],
     },
 )
