@@ -5,5 +5,5 @@ camera_pub_node:
 gt_test_node:
   ros__parameters:
     marker_size_mm: 151.0
-    camera_matrix: [753.611, 338.179, 752.676, 241.622] # fx, cx, fy, cy
-    distortion_matrix: [ 0.08098212, -0.21402227,  0.,          0.,          0.        ]
+    camera_matrix: [780.756, 324.756, 783.075, 247.910] # fx, cx, fy, cy
+    distortion_matrix: [ 5.31237941e-02 , 2.66290070e-02 , 5.69420326e-04 , -4.06851604e-03 , -6.82977869e-01]

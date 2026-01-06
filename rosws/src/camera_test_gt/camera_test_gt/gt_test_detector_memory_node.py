@@ -60,7 +60,7 @@ class GtTester(Node):
     def proces_images(self,image_msg:Image): 
         #undistort image
         frame= self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='bgr8')
-        undistorted_image = cv2.undistort(
+        undistorted_image = cv2.undistort( #TODO: fix undistortion????
             frame,
             self.camera_matrix,
             self.distortion_matrix
@@ -71,16 +71,16 @@ class GtTester(Node):
         corners, ids, rejected = self.detector.detectMarkers(gray)
         cv2.aruco.drawDetectedMarkers(gray,corners,ids)
         rvecs, tvecs, _ = self.estimatePoseSingleMarker(
-                    corners, self.marker_size_mm/1000, self.camera_matrix, np.zeros(5,1) #self.distortion_matrix #zero if undistorted image
+                    corners, self.marker_size_mm/1000, self.camera_matrix, np.zeros((5,1)) #self.distortion_matrix #zero if undistorted image
                 )
         #check for known markers
-        if(ids):
+        if(ids is not None and len(ids) > 0):
             if(len(self.world_marker_transforms)==0): #initial marker memory
                 for i,x in enumerate(ids):
                     rvec=rvecs[i]
                     tvec=tvecs[i]
                     T_cam_marker=self.make_transform(rvec, tvec)
-                    self.world_marker_transforms[x] = T_cam_marker # camera starts as world origin
+                    self.world_marker_transforms[int(x)] = T_cam_marker # camera starts as world origin
                 #sets base pose and publishes it
                 self.last_cam_pose=PoseStamped()
                 self.last_cam_pose.pose.position.x=0.0
@@ -106,23 +106,23 @@ class GtTester(Node):
                 T_c_m=None # camera marker transform
                 T_w_c=None # world camera trransform
                 for i,x in enumerate(ids):
-                    if(x in self.world_marker_transforms):
-                        T_w_m = self.world_marker_transforms[x]
+                    if(int(x) in self.world_marker_transforms):
+                        T_w_m = self.world_marker_transforms[int(x)]
                         rvec = rvecs[i]
                         tvec = tvecs[i]
                         T_c_m = self.make_transform(rvec, tvec)
                         break
                 #calculate cmera world pose based on known marker
-                if(T_w_m):
+                if(not(T_w_m is None)):
                     T_w_c = T_w_m @ self.invert_transform(T_c_m)
                     #calculate world marker pose for other new markers
                     for i,x in enumerate(ids):
-                        if(x not in self.world_marker_transforms):
+                        if(int(x) not in self.world_marker_transforms):
                             rvec = rvecs[i]
                             tvec = tvecs[i]
                             T_c_nm = self.make_transform(rvec, tvec) # camera new marker transform
                             T_w_nm = T_w_c @ T_c_nm # world new marker transform
-                            self.world_marker_transforms[x]=T_w_nm
+                            self.world_marker_transforms[int(x)]=T_w_nm
                     #publish new pose of camera
                     pose = self.matrix_to_pose(T_w_c)
                     self.last_cam_pose=pose
@@ -138,7 +138,7 @@ class GtTester(Node):
                     self.path_pub.publish(self.camera_path)
                 
                 else: # skip any action if no marker corilation was found
-                    return
+                    pass
         #publish image of detected markers
         self.marker_image = self.bridge.cv2_to_imgmsg(gray, 'mono8')
         self.marker_image_pub.publish(self.marker_image)

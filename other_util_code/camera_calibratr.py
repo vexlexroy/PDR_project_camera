@@ -48,7 +48,7 @@ def main():
             cv2.drawChessboardCorners(display_frame, CHECKERBOARD, corners, ret_cb)
 
         cv2.putText(display_frame, f"Captured: {captured}/{args.num}",
-                    (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0) if ret_cb else (0, 0, 255), 2)
+                    (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0) if ret_cb else (0, 0, 255), 2)
         cv2.imshow('Calibration', display_frame)
 
         if ret_cb and frame_count % args.interval == 0:
@@ -78,7 +78,7 @@ def main():
     cv2.CALIB_ZERO_TANGENT_DIST
     )
 
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None, flags=flags)
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
     if not ret:
         print("Calibration failed.")
         return
@@ -88,7 +88,7 @@ def main():
 
     print("\n=== Calibration Results ===")
     print("Camera matrix:\n", mtx)
-    print("\nDistortion coefficients:\n", dist.ravel())
+    print("\nDistortion coefficients:\n", dist)
     print(f"\n[fx, cx, fy, cy] = [{fx:.3f}, {cx:.3f}, {fy:.3f}, {cy:.3f}]")
 
     mean_error = 0
