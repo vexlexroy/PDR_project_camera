@@ -12,10 +12,9 @@ def main():
     parser.add_argument('--interval', type=int, default=10, help='Capture interval')
     parser.add_argument('--id', type=int, default=0, help='Camera device ID')
     args = parser.parse_args()
-
+    #define checker board
     CHECKERBOARD = (args.cols, args.rows)
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-
     objp = np.zeros((CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
     objp[:, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
     objp *= args.size
@@ -23,6 +22,7 @@ def main():
     objpoints = []
     imgpoints = []
 
+    # open camera capture
     cap = cv2.VideoCapture(args.id)
     if not cap.isOpened():
         print("Error: Could not open camera.")
@@ -34,16 +34,17 @@ def main():
     frame_count = 0
     captured = 0
 
-    while captured < args.num:
+    while captured < args.num:# count how many captured images
         ret, frame = cap.read()
         if not ret:
             print("Failed to grab frame.")
             break
-
+        
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        #detect checker board
         ret_cb, corners = cv2.findChessboardCorners(gray, CHECKERBOARD, None)
-
         display_frame = frame.copy()
+
         if ret_cb:
             cv2.drawChessboardCorners(display_frame, CHECKERBOARD, corners, ret_cb)
 
@@ -51,7 +52,7 @@ def main():
                     (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0) if ret_cb else (0, 0, 255), 2)
         cv2.imshow('Calibration', display_frame)
 
-        if ret_cb and frame_count % args.interval == 0:
+        if ret_cb and frame_count % args.interval == 0:# if its every n.th frame
             corners_refined = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
             objpoints.append(objp)
             imgpoints.append(corners_refined)
@@ -67,18 +68,18 @@ def main():
     cap.release()
     cv2.destroyAllWindows()
 
-    if captured < 3:
+    if captured < args.num:
         print("Not enough valid images captured for calibration.")
         return
 
     print("Calibrating camera...")
 
-    flags = (
+    flags = ( # TODO: Check flags
     cv2.CALIB_FIX_K3 |
     cv2.CALIB_ZERO_TANGENT_DIST
     )
 
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None, flags=flags)
     if not ret:
         print("Calibration failed.")
         return
