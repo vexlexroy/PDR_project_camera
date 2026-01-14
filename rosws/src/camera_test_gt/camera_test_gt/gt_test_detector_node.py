@@ -12,16 +12,20 @@ import numpy as np
 class GtTester(Node):
     def __init__(self):
         super().__init__('gt_video_test')
-        self.declare_parameter('distortion_matrix', [0.0, 0.0, 0.0, 0.0, 0.0])
+        self.declare_parameter('distortion_matrix', [0.0, 0.0, 0.0, 0.0, 0.0]) # camera distortion matrix
         self.cam_distortion_in = self.get_parameter('distortion_matrix').value
-        self.declare_parameter('camera_matrix', [0.0]*4)
+        self.declare_parameter('camera_matrix', [0.0]*4) # camera matrix
         self.cam_matrix_in = self.get_parameter('camera_matrix').value
-        self.declare_parameter('marker_size_mm', 10.0)
+        self.declare_parameter('marker_size_mm', 10.0) # size of individual markers
         self.marker_size_mm = self.get_parameter('marker_size_mm').value
-        self.declare_parameter('testing', True)
+        self.declare_parameter('testing', True) # for some testing features that will not be needed latter
         self.testing = self.get_parameter('testing').value
-        self.declare_parameter('max_path', 5000)
+        self.declare_parameter('max_path', 5000) #how many path points it collects
         self.max_path = self.get_parameter('max_path').value
+        self.declare_parameter('is_2d',False) #to make it publish path in 2d with no rotation
+        self.is_2d= self.get_parameter('is_2d').value
+        self.declare_parameter('avg_marker_frames',5) #used to determin how many captures of every marker are used to estimate pose
+        self.avg_marker_frames= self.get_parameter('avg_marker_frames').value
 
         self.camera_matrix=np.array([
                           [self.cam_matrix_in[0], 0.0, self.cam_matrix_in[2]],# fx, 0, cx
@@ -53,7 +57,7 @@ class GtTester(Node):
 
         self.path_pub = self.create_publisher(Path, '/camera_path', 10)
         self.camera_path = Path()
-        self.camera_path.header.frame_id = 'world'
+        self.camera_path.header.frame_id = 'odom'
 
     def proces_images(self,image_msg:Image): 
         '''gets new image and calculates new camera position
@@ -90,7 +94,7 @@ class GtTester(Node):
             self.last_cam_pose.pose.orientation.z=0.0
             self.last_cam_pose.pose.orientation.w=1.0
             self.last_cam_pose.header.stamp = self.get_clock().now().to_msg()
-            self.last_cam_pose.header.frame_id = 'cam'
+            self.last_cam_pose.header.frame_id = 'odom'
             self.camera_pose.publish(self.last_cam_pose)
             
             pose_for_path = PoseStamped()
@@ -118,10 +122,10 @@ class GtTester(Node):
                     return
 
                 rvecs, tvecs, _ = self.estimatePoseSingleMarker(
-                    corners, self.marker_size_mm/1000, self.camera_matrix, np.zeros(5,1) #self.distortion_matrix
+                    corners, self.marker_size_mm/1000, self.camera_matrix, np.zeros((5,1)) #self.distortion_matrix
                 )
                 rvecs2, tvecs2, _ = self.estimatePoseSingleMarker(
-                    corners2, self.marker_size_mm/1000, self.camera_matrix, np.zeros(5,1) #self.distortion_matrix
+                    corners2, self.marker_size_mm/1000, self.camera_matrix, np.zeros((5,1)) #self.distortion_matrix
                 )
                 first_match=matches[0]
                 T_C1_M = self.make_transform(rvecs2[first_match[0]], tvecs2[first_match[0]])  # marker->camera1
@@ -197,7 +201,7 @@ class GtTester(Node):
         pose.pose.position.y = float(T[1, 3])
         pose.pose.position.z = float(T[2, 3])
         pose.header.stamp = self.get_clock().now().to_msg()
-        pose.header.frame_id = 'cam'
+        pose.header.frame_id = 'odom'
         rot = R.from_matrix(T[:3, :3])
         q = rot.as_quat()  # [x, y, z, w]
         pose.pose.orientation.x = float(q[0])

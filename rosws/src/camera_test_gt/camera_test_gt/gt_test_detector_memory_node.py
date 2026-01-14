@@ -12,16 +12,20 @@ import numpy as np
 class GtTester(Node):
     def __init__(self):
         super().__init__('gt_video_test')
-        self.declare_parameter('distortion_matrix', [0.0, 0.0, 0.0, 0.0, 0.0])
+        self.declare_parameter('distortion_matrix', [0.0, 0.0, 0.0, 0.0, 0.0]) # camera distortion matrix
         self.cam_distortion_in = self.get_parameter('distortion_matrix').value
-        self.declare_parameter('camera_matrix', [0.0]*4)
+        self.declare_parameter('camera_matrix', [0.0]*4) # camera matrix
         self.cam_matrix_in = self.get_parameter('camera_matrix').value
-        self.declare_parameter('marker_size_mm', 10.0)
+        self.declare_parameter('marker_size_mm', 10.0) # size of individual markers
         self.marker_size_mm = self.get_parameter('marker_size_mm').value
-        self.declare_parameter('testing', True)
+        self.declare_parameter('testing', True) # for some testing features that will not be needed latter
         self.testing = self.get_parameter('testing').value
-        self.declare_parameter('max_path', 5000)
+        self.declare_parameter('max_path', 5000) #how many path points it collects
         self.max_path = self.get_parameter('max_path').value
+        self.declare_parameter('is_2d',False) #to make it publish path in 2d with no rotation
+        self.is_2d= self.get_parameter('is_2d').value
+        self.declare_parameter('avg_marker_frames',5) #used to determin how many captures of every marker are used to estimate pose
+        self.avg_marker_frames= self.get_parameter('avg_marker_frames').value
 
         self.camera_matrix=np.array([
                           [self.cam_matrix_in[0], 0.0, self.cam_matrix_in[2]],# fx, 0, cx
@@ -53,9 +57,16 @@ class GtTester(Node):
 
         self.path_pub = self.create_publisher(Path, '/camera_path', 10)
         self.camera_path = Path()
-        self.camera_path.header.frame_id = 'world'
+        self.camera_path.header.frame_id = 'odom'
 
-        self.world_marker_transforms={}
+        self.world_marker_transforms={} # holds average transform
+        self.world_marker_transforms_list:dict[int,list]={} # holds mesured transforms
+
+        self.criteria = (
+            cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
+            30,
+            0.001
+            )
 
     def proces_images(self,image_msg:Image): 
         #undistort image
@@ -65,22 +76,36 @@ class GtTester(Node):
             self.camera_matrix,
             self.distortion_matrix
         )
-        gray = cv2.cvtColor(undistorted_image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         #detect markers
         corners, ids, rejected = self.detector.detectMarkers(gray)
         cv2.aruco.drawDetectedMarkers(gray,corners,ids)
         rvecs, tvecs, _ = self.estimatePoseSingleMarker(
-                    corners, self.marker_size_mm/1000, self.camera_matrix, np.zeros((5,1)) #self.distortion_matrix #zero if undistorted image
+                    corners, self.marker_size_mm/1000, self.camera_matrix, self.distortion_matrix #zero if undistorted image
                 )
         #check for known markers
         if(ids is not None and len(ids) > 0):
+            for i in range(len(corners)):
+                cv2.cornerSubPix(
+                gray,
+                corners[i],
+                winSize=(5, 5),
+                zeroZone=(-1, -1),
+                criteria=self.criteria
+                )
             if(len(self.world_marker_transforms)==0): #initial marker memory
                 for i,x in enumerate(ids):
                     rvec=rvecs[i]
                     tvec=tvecs[i]
                     T_cam_marker=self.make_transform(rvec, tvec)
-                    self.world_marker_transforms[int(x)] = T_cam_marker # camera starts as world origin
+                    if(int(x) in self.world_marker_transforms_list):
+                        self.world_marker_transforms_list[int(x)].append(T_cam_marker)
+                    else:
+                        self.world_marker_transforms_list[int(x)]=[]
+                        self.world_marker_transforms_list[int(x)].append(T_cam_marker)
+                    if(len(self.world_marker_transforms_list[int(x)])>=self.avg_marker_frames):
+                        self.world_marker_transforms[int(x)] = self.average_transforms(self.world_marker_transforms_list[int(x)]) # camera starts as world origin
                 #sets base pose and publishes it
                 self.last_cam_pose=PoseStamped()
                 self.last_cam_pose.pose.position.x=0.0
@@ -91,7 +116,7 @@ class GtTester(Node):
                 self.last_cam_pose.pose.orientation.z=0.0
                 self.last_cam_pose.pose.orientation.w=1.0
                 self.last_cam_pose.header.stamp = self.get_clock().now().to_msg()
-                self.last_cam_pose.header.frame_id = 'cam'
+                self.last_cam_pose.header.frame_id = 'odom'
                 self.camera_pose.publish(self.last_cam_pose)
                 #adds begining to path
                 pose_for_path = PoseStamped()
@@ -105,43 +130,60 @@ class GtTester(Node):
                 T_w_m=None # world marker transform
                 T_c_m=None # camera marker transform
                 T_w_c=None # world camera trransform
+                T_w_c_list=[]
                 for i,x in enumerate(ids):
                     if(int(x) in self.world_marker_transforms):
                         T_w_m = self.world_marker_transforms[int(x)]
                         rvec = rvecs[i]
                         tvec = tvecs[i]
                         T_c_m = self.make_transform(rvec, tvec)
-                        break
+                        T_w_c_list.append(T_w_m @ self.invert_transform(T_c_m))
                 #calculate cmera world pose based on known marker
                 if(not(T_w_m is None)):
-                    T_w_c = T_w_m @ self.invert_transform(T_c_m)
+                    T_w_c = T_w_c_list[0]#self.average_transforms(T_w_c_list)
                     #calculate world marker pose for other new markers
-                    for i,x in enumerate(ids):
-                        if(int(x) not in self.world_marker_transforms):
-                            rvec = rvecs[i]
-                            tvec = tvecs[i]
-                            T_c_nm = self.make_transform(rvec, tvec) # camera new marker transform
-                            T_w_nm = T_w_c @ T_c_nm # world new marker transform
-                            self.world_marker_transforms[int(x)]=T_w_nm
+                    # for i,x in enumerate(ids):
+                    #     if(int(x) not in self.world_marker_transforms):
+                    #         rvec = rvecs[i]
+                    #         tvec = tvecs[i]
+                    #         T_c_nm = self.make_transform(rvec, tvec) # camera new marker transform
+                    #         T_w_nm = T_w_c @ T_c_nm # world new marker transform
+                    #         if(int(x) in self.world_marker_transforms_list):
+                    #             self.world_marker_transforms_list[int(x)].append(T_w_nm)
+                    #         else:
+                    #             self.world_marker_transforms_list[int(x)]=[]
+                    #             self.world_marker_transforms_list[int(x)].append(T_w_nm)
+                    #         if(len(self.world_marker_transforms_list[int(x)])>=self.avg_marker_frames): # must have that many measurmentes
+                    #             self.world_marker_transforms[int(x)] = self.average_transforms(self.world_marker_transforms_list[int(x)])
                     #publish new pose of camera
                     pose = self.matrix_to_pose(T_w_c)
                     self.last_cam_pose=pose
                     self.camera_pose.publish(pose)
                     
-                    pose_for_path = PoseStamped()
-                    pose_for_path.header = pose.header
-                    pose_for_path.pose = pose.pose
-                    self.camera_path.header.stamp = self.get_clock().now().to_msg()
-                    self.camera_path.poses.append(pose_for_path)
-                    if(len(self.camera_path.poses)>self.max_path):
-                        self.camera_path.poses.pop(0)
-                    self.path_pub.publish(self.camera_path)
+                    if(self.testing):
+                        pose_for_path = PoseStamped()
+                        pose_for_path.header = pose.header
+                        pose_for_path.pose = pose.pose
+                        pose_for_path.header.frame_id = "odom"
+                        #only 2d
+                        if(self.is_2d):
+                            pose_for_path.pose.position.z=0.0
+                            pose_for_path.pose.orientation.w=1.0
+                            pose_for_path.pose.orientation.z=0.0
+                            pose_for_path.pose.orientation.y=0.0
+                            pose_for_path.pose.orientation.x=0.0
+                        self.camera_path.header.stamp = self.get_clock().now().to_msg()
+                        self.camera_path.poses.append(pose_for_path)
+                        if(len(self.camera_path.poses)>self.max_path): # pop first pose if to many acumulate
+                            self.camera_path.poses.pop(0)
+                        self.path_pub.publish(self.camera_path)
                 
                 else: # skip any action if no marker corilation was found
                     pass
         #publish image of detected markers
-        self.marker_image = self.bridge.cv2_to_imgmsg(gray, 'mono8')
-        self.marker_image_pub.publish(self.marker_image)
+        if(self.testing):
+            self.marker_image = self.bridge.cv2_to_imgmsg(gray, 'mono8')
+            self.marker_image_pub.publish(self.marker_image)
         pass
 
             
@@ -191,7 +233,7 @@ class GtTester(Node):
         pose.pose.position.y = float(T[1, 3])
         pose.pose.position.z = float(T[2, 3])
         pose.header.stamp = self.get_clock().now().to_msg()
-        pose.header.frame_id = 'cam'
+        pose.header.frame_id = 'odom'
         rot = R.from_matrix(T[:3, :3])
         q = rot.as_quat()  # [x, y, z, w]
         pose.pose.orientation.x = float(q[0])
@@ -199,6 +241,41 @@ class GtTester(Node):
         pose.pose.orientation.z = float(q[2])
         pose.pose.orientation.w = float(q[3])
         return pose
+    
+    def average_transforms(self, T_list):
+        """
+        Average multiple 4x4 transforms
+        """
+        if len(T_list) == 0:
+            return None
+
+        # --- average translation ---
+        translations = np.array([T[:3, 3] for T in T_list])
+        t_avg = np.mean(translations, axis=0)
+
+        # --- average rotation ---
+        quats = []
+        for T in T_list:
+            r = R.from_matrix(T[:3, :3])
+            q = r.as_quat()  # [x, y, z, w]
+            quats.append(q)
+        quats = np.array(quats)
+
+        # Ensure same hemisphere
+        for i in range(1, len(quats)):
+            if np.dot(quats[0], quats[i]) < 0:
+                quats[i] = -quats[i]
+
+        q_avg = np.mean(quats, axis=0)
+        q_avg /= np.linalg.norm(q_avg)
+        # Back to matrix
+        R_avg = R.from_quat(q_avg).as_matrix()
+        # Build transform
+        T_avg = np.eye(4)
+        T_avg[:3, :3] = R_avg
+        T_avg[:3, 3] = t_avg
+        return T_avg
+
 
 
 
