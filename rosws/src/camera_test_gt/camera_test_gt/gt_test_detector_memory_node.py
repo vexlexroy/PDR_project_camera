@@ -142,19 +142,19 @@ class GtTester(Node):
                 if(not(T_w_m is None)):
                     T_w_c = T_w_c_list[0]#self.average_transforms(T_w_c_list)
                     #calculate world marker pose for other new markers
-                    # for i,x in enumerate(ids):
-                    #     if(int(x) not in self.world_marker_transforms):
-                    #         rvec = rvecs[i]
-                    #         tvec = tvecs[i]
-                    #         T_c_nm = self.make_transform(rvec, tvec) # camera new marker transform
-                    #         T_w_nm = T_w_c @ T_c_nm # world new marker transform
-                    #         if(int(x) in self.world_marker_transforms_list):
-                    #             self.world_marker_transforms_list[int(x)].append(T_w_nm)
-                    #         else:
-                    #             self.world_marker_transforms_list[int(x)]=[]
-                    #             self.world_marker_transforms_list[int(x)].append(T_w_nm)
-                    #         if(len(self.world_marker_transforms_list[int(x)])>=self.avg_marker_frames): # must have that many measurmentes
-                    #             self.world_marker_transforms[int(x)] = self.average_transforms(self.world_marker_transforms_list[int(x)])
+                    for i,x in enumerate(ids):
+                        if(int(x) not in self.world_marker_transforms):
+                            rvec = rvecs[i]
+                            tvec = tvecs[i]
+                            T_c_nm = self.make_transform(rvec, tvec) # camera new marker transform
+                            T_w_nm = T_w_c @ T_c_nm # world new marker transform
+                            if(int(x) in self.world_marker_transforms_list):
+                                self.world_marker_transforms_list[int(x)].append(T_w_nm)
+                            else:
+                                self.world_marker_transforms_list[int(x)]=[]
+                                self.world_marker_transforms_list[int(x)].append(T_w_nm)
+                            if(len(self.world_marker_transforms_list[int(x)])>=self.avg_marker_frames): # must have that many measurmentes
+                                self.world_marker_transforms[int(x)] = self.average_transforms(self.world_marker_transforms_list[int(x)])
                     #publish new pose of camera
                     pose = self.matrix_to_pose(T_w_c)
                     self.last_cam_pose=pose
