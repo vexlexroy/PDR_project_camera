@@ -17,13 +17,15 @@ def main():
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     objp = np.zeros((CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)
     objp[:, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
-    objp *= args.size
+    objp *= args.size/1000
 
     objpoints = []
     imgpoints = []
 
     # open camera capture
     cap = cv2.VideoCapture(args.id)
+    cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+    cap.set(cv2.CAP_PROP_FOCUS, 0)
     if not cap.isOpened():
         print("Error: Could not open camera.")
         return
@@ -75,11 +77,14 @@ def main():
     print("Calibrating camera...")
 
     flags = ( # TODO: Check flags
-    cv2.CALIB_FIX_K3 |
+    # cv2.CALIB_FIX_K3 +
     cv2.CALIB_ZERO_TANGENT_DIST
+    #+ cv2.CALIB_USE_INTRINSIC_GUESS
     )
+    # flags=0
 
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None, flags=flags)
+    # ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None, flags=flags)
+    ret, mtx, dist, rvecs, tvecs, _ = cv2.calibrateCameraRO(objpoints, imgpoints, gray.shape[::-1], iFixedPoint=2, cameraMatrix=None, distCoeffs=None, flags=flags)
     if not ret:
         print("Calibration failed.")
         return

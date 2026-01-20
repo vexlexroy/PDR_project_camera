@@ -4,9 +4,9 @@ camera_pub_node:
 
 gt_test_node:
   ros__parameters:
-    max_path: 5000
-    is_2d: True
-    testing: True
-    marker_size_mm: 151.0
-    camera_matrix: [426.300, 313.605, 427.782, 237.654] # fx, cx, fy, cy
-    distortion_matrix: [-0.09070626,  0.08382796,  0.,          0.,          0.        ]
+    max_path: 5000 # how mutch points to acumulate
+    is_2d: True # makes path 2d in x/y plane
+    testing: True # adds extra topics for testing
+    marker_size_mm: 151.0 # size of detected markers
+    camera_matrix: [523.564, 299.764, 523.913, 241.142] # fx, cx, fy, cy
+    distortion_matrix: [-0.09235926,  0.14059952,  0.,          0.,         -0.01142402] # k1, k2, p1, p2, k3

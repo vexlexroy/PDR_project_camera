@@ -69,20 +69,35 @@ class GtTester(Node):
             )
 
     def proces_images(self,image_msg:Image): 
-        #undistort image
         frame= self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='bgr8')
-        undistorted_image = cv2.undistort( #TODO: fix undistortion????
-            frame,
+
+        #undistort image
+        h, w = frame.shape[:2]
+        # self.get_logger().info(f"cam: {(h,w)}")
+        newK, _ = cv2.getOptimalNewCameraMatrix(
             self.camera_matrix,
-            self.distortion_matrix
+            self.distortion_matrix,
+            (w, h),
+            0.0,
+            (w, h)
         )
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        map1, map2 = cv2.initUndistortRectifyMap(
+            self.camera_matrix,
+            self.distortion_matrix,
+            None,
+            newK,
+            (w, h),
+            cv2.CV_16SC2
+        )
+        undistorted_image = cv2.remap(frame, map1, map2, cv2.INTER_LINEAR)
+
+        gray = cv2.cvtColor(undistorted_image, cv2.COLOR_BGR2GRAY)
 
         #detect markers
         corners, ids, rejected = self.detector.detectMarkers(gray)
         cv2.aruco.drawDetectedMarkers(gray,corners,ids)
         rvecs, tvecs, _ = self.estimatePoseSingleMarker(
-                    corners, self.marker_size_mm/1000, self.camera_matrix, self.distortion_matrix #zero if undistorted image
+                    corners, self.marker_size_mm/1000, newK, np.zeros(5)#self.camera_matrix, self.distortion_matrix #zero if undistorted image
                 )
         #check for known markers
         if(ids is not None and len(ids) > 0):
