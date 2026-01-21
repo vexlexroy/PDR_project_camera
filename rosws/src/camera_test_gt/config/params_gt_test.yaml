@@ -7,6 +7,8 @@ gt_test_node:
     max_path: 5000 # how mutch points to acumulate
     is_2d: True # makes path 2d in x/y plane
     testing: True # adds extra topics for testing
+    avg_marker_frames: 10 # way to specify how many marker frames are averaged when geting world transforms
+    path_update_rate: 30 # update path every nth frame
     marker_size_mm: 151.0 # size of detected markers
     camera_matrix: [523.564, 299.764, 523.913, 241.142] # fx, cx, fy, cy
     distortion_matrix: [-0.09235926,  0.14059952,  0.,          0.,         -0.01142402] # k1, k2, p1, p2, k3
