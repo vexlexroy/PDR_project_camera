@@ -54,6 +54,11 @@ def main():
     distortion_matrix= np.array([-0.09235926,  0.14059952,  0.,          0.,         -0.01142402])
     marker_size_mm=151
     world_marker_transforms={}
+    T_cam_to_ros = np.array([
+                        [ 0,  0,  1, 0],
+                        [ 1,  0,  0, 0],
+                        [ 0, -1,  0, 0],
+                        [ 0,  0,  0, 1]])
     
     #open camera
     cap = cv2.VideoCapture(id)
@@ -118,12 +123,12 @@ def main():
                         T_c_m = get_transform(rvecs[i],tvecs[i]) # camera marker transform
                         if(int(x) in T_w_m_id):
                             T_w_m=world_marker_transforms[int(x)]
-                            T_w_c.append(np.linalg.inv(T_c_m)@T_w_m) # get world camera transform
+                            T_w_c.append(T_w_m@np.linalg.inv(T_c_m)) # get world camera transform
                     for i,x in enumerate(ids):
                         T_c_mn = get_transform(rvecs[i],tvecs[i]) # camera marker transform
                         if(int(x) not in T_w_m_id):
                             world_marker_transforms[int(x)]=T_w_c[0]@T_c_mn
-                    x,y,z=matrix_to_pose(T_w_c[0])
+                    x,y,z=matrix_to_pose(T_w_c[0]@T_cam_to_ros)
                     print(f"x: {x:.4f} y: {y:.4f} z: {z:.4f}")
 
 
