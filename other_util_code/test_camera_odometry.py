@@ -1,6 +1,25 @@
 import cv2
 import numpy as np
+from scipy.spatial.transform import Rotation as R
+import matplotlib.pyplot as plt
 
+
+def autoscale_with_min(ax, xmin, xmax, ymin, ymax):
+    ax.relim()
+    ax.autoscale_view()
+
+    # get current limits
+    cur_xmin, cur_xmax = ax.get_xlim()
+    cur_ymin, cur_ymax = ax.get_ylim()
+
+    # enforce minimum range
+    cur_xmin = min(cur_xmin, xmin)
+    cur_xmax = max(cur_xmax, xmax)
+    cur_ymin = min(cur_ymin, ymin)
+    cur_ymax = max(cur_ymax, ymax)
+
+    ax.set_xlim(cur_xmin, cur_xmax)
+    ax.set_ylim(cur_ymin, cur_ymax)
 
 def estimatePoseSingleMarkers(corners, marker_size, mtx, distortion):
     '''
@@ -39,27 +58,57 @@ def matrix_to_pose(T: np.ndarray):
     x = float(T[0, 3])
     y = float(T[1, 3])
     z = float(T[2, 3])
-    return x,y,z
+    rot = R.from_matrix(T[:3, :3])
+    q = rot.as_quat()  # [x, y, z, w]
+    ang=rot.as_euler('xyz', degrees=True)
+
+
+    return x,y,z,q,ang
 
 
 def main():
+    x_path=[]
+    y_path=[]
+    z_path=[]
+    q_path=[]
+    ang_path=[]
     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
     parameters = cv2.aruco.DetectorParameters()
     detector=cv2.aruco.ArucoDetector(dictionary=aruco_dict,detectorParams=parameters)
 
     id = 2
-    camera_matrix= np.array(([523.56400802,   0.,         299.76402461],
-                    [  0.,         523.91329778, 241.14238425],
-                    [  0.,           0.,           1.        ]))
-    distortion_matrix= np.array([-0.09235926,  0.14059952,  0.,          0.,         -0.01142402])
+    camera_matrix = np.array([
+        [528.963795, 0.0,       300.441205],
+        [0.0,        529.372856, 241.815110],
+        [0.0,        0.0,         1.0]
+    ], dtype=np.float32)
+
+    distortion_matrix = np.array([
+        -0.082430,
+        0.152254,
+        -0.003181,
+        -0.001335,
+        0.000000
+    ], dtype=np.float32)
     marker_size_mm=151
     world_marker_transforms={}
-    T_cam_to_ros = np.array([
+    T_ros_world = np.array([
                         [ 0,  0,  1, 0],
                         [ 1,  0,  0, 0],
                         [ 0, -1,  0, 0],
                         [ 0,  0,  0, 1]])
     
+
+    #ploting
+    plt.ion()
+    fig, ax = plt.subplots()
+    line, = ax.plot([], [], 'b-')
+    ax.set_xlabel("X [m]")
+    ax.set_ylabel("Y [m]")
+    ax.set_title("Live camera position")
+    ax.axis("equal")
+    ax.grid(True)
+
     #open camera
     cap = cv2.VideoCapture(id)
     cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
@@ -70,7 +119,10 @@ def main():
     print("Press 'q' to quit early.")
 
     # get new frame
+    frame_counter=0
+    pose_on=20
     while True:
+        frame_counter=frame_counter+1
         ret, frame = cap.read()
         if not ret:
             print("Failed to grab frame.")
@@ -118,21 +170,34 @@ def main():
                 for i,x in enumerate(ids):
                     if(int(x) in world_marker_transforms):# check if known marker exists
                         T_w_m_id.append(int(x))
-                if(len(T_w_m_id)!=0):
+                if(len(T_w_m_id)!=0): # if there are known markers
                     for i,x in enumerate(ids):
                         T_c_m = get_transform(rvecs[i],tvecs[i]) # camera marker transform
-                        if(int(x) in T_w_m_id):
-                            T_w_m=world_marker_transforms[int(x)]
-                            T_w_c.append(T_w_m@np.linalg.inv(T_c_m)) # get world camera transform
-                    for i,x in enumerate(ids):
-                        T_c_mn = get_transform(rvecs[i],tvecs[i]) # camera marker transform
-                        if(int(x) not in T_w_m_id):
-                            world_marker_transforms[int(x)]=T_w_c[0]@T_c_mn
-                    x,y,z=matrix_to_pose(T_w_c[0]@T_cam_to_ros)
-                    print(f"x: {x:.4f} y: {y:.4f} z: {z:.4f}")
+                        if(int(x) in T_w_m_id): #if marker is known
+                            T_w_m=world_marker_transforms[int(x)] # load world to marker T
+                            T_w_c_mat=T_w_m@np.linalg.inv(T_c_m) # calculate world camera transform
+                            grade=np.linalg.norm(T_c_m[:3,3]) # calculate how close to camera is it
+                            T_w_c.append((T_w_c_mat,grade)) # aprased world camera transform by closeness
+                    T_w_c.sort(key=lambda x: x[1]) # sort by closest marker
+                    for i,x in enumerate(ids): # calculate other marker positions
+                        T_c_mn = get_transform(rvecs[i],tvecs[i]) # camera marker transform for new marker
+                        if(int(x) not in T_w_m_id): # if it doesent already exist
+                            world_marker_transforms[int(x)]=T_w_c[0][0]@T_c_mn # make noew world marker transform based on known world camera transform
+                    if(frame_counter%pose_on==0): # update pose every n frames / ploting
+                        x,y,z,q,ang=matrix_to_pose(T_ros_world@T_w_c[0][0]) # get data from matrix rotated to ros system x->forward, y->right, z->up
+                        x_path.append(x)
+                        y_path.append(y)
+                        z_path.append(z)
+                        q_path.append(q)
+                        ang_path.append(ang)
+
+                        line.set_data(x_path, y_path)
+                        autoscale_with_min(ax, -1, 1, -1, 1)
+                        plt.pause(0.001)
+                    # print(f"x: {x:.4f} y: {y:.4f} z: {z:.4f}")
 
 
-
+    plt.show()
 
 
 
