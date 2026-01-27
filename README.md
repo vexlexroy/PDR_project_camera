@@ -36,6 +36,11 @@ ros2 run v4l2_camera v4l2_camera_node \
 ```
 set bord parametars
 ```
-ros2 run camera_calibration cameracalibrator   --size 7x9   --square 0.0185  --ros-args -r image:=/image_raw
+ros2 run camera_calibration cameracalibrator \
+  --size 7x9 \
+  --square 0.0185 \
+  --no-service-check \
+  --ros-args -r image:=/image_raw
+
 ```
 Resaults will be saved in '/tmp/calibrationdata.tar.gz'
