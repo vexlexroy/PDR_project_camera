@@ -1,3 +1,4 @@
+import heapq
 import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -102,9 +103,10 @@ def main():
     #ploting
     plt.ion()
     fig, ax = plt.subplots()
-    line, = ax.plot([], [], 'b-')
+    sc = ax.scatter([], [], c=[], cmap='viridis', s=15)
     ax.set_xlabel("X [m]")
     ax.set_ylabel("Y [m]")
+    plt.colorbar(sc, ax=ax, label="Z [m]")
     ax.set_title("Live camera position")
     ax.axis("equal")
     ax.grid(True)
@@ -116,11 +118,13 @@ def main():
     if not cap.isOpened():
         print("Error: Could not open camera.")
         return
-    print("Press 'q' to quit early.")
-
     # get new frame
     frame_counter=0
-    pose_on=20
+    pose_on=5
+    last_pose=None
+    min_motion=0.05
+    mapping_enabled = False
+    print("Press 'm' to ENABLE mapping, 'l' to LOCK mapping, 'q' to quit")
     while True:
         frame_counter=frame_counter+1
         ret, frame = cap.read()
@@ -154,6 +158,13 @@ def main():
         cv2.imshow('display',gray)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+        if cv2.waitKey(1) & 0xFF == ord('m'):
+            mapping_enabled=True
+            print("mapping on")
+        if cv2.waitKey(1) & 0xFF == ord('l'):
+            mapping_enabled=False
+            print("mapping off")
+
         # compute 3d pose
         rvecs, tvecs, _ = estimatePoseSingleMarkers(
                     corners, marker_size_mm/1000, newK, np.zeros(5)
@@ -164,12 +175,12 @@ def main():
                 for i,x in enumerate(ids):
                     world_marker_transforms[int(x)]=get_transform(rvecs[i],tvecs[i])
             else:
-                T_w_m_id=[]
+                T_w_m_id=set()
                 T_c_m=None
                 T_w_c=[]
                 for i,x in enumerate(ids):
                     if(int(x) in world_marker_transforms):# check if known marker exists
-                        T_w_m_id.append(int(x))
+                        T_w_m_id.add(int(x))
                 if(len(T_w_m_id)!=0): # if there are known markers
                     for i,x in enumerate(ids):
                         T_c_m = get_transform(rvecs[i],tvecs[i]) # camera marker transform
@@ -177,21 +188,30 @@ def main():
                             T_w_m=world_marker_transforms[int(x)] # load world to marker T
                             T_w_c_mat=T_w_m@np.linalg.inv(T_c_m) # calculate world camera transform
                             grade=np.linalg.norm(T_c_m[:3,3]) # calculate how close to camera is it
-                            T_w_c.append((T_w_c_mat,grade)) # aprased world camera transform by closeness
-                    T_w_c.sort(key=lambda x: x[1]) # sort by closest marker
-                    for i,x in enumerate(ids): # calculate other marker positions
-                        T_c_mn = get_transform(rvecs[i],tvecs[i]) # camera marker transform for new marker
-                        if(int(x) not in T_w_m_id): # if it doesent already exist
-                            world_marker_transforms[int(x)]=T_w_c[0][0]@T_c_mn # make noew world marker transform based on known world camera transform
+                            heapq.heappush(T_w_c, (grade, T_w_c_mat)) # aprased world camera transform by closeness
+                    # T_w_c.sort(key=lambda x: x[1]) # sort by closest marker
+                    best_T_w_c=T_w_c[0][1]
+                    if(mapping_enabled): # if maping enabled
+                        for i,x in enumerate(ids): # calculate other marker positions
+                            T_c_mn = get_transform(rvecs[i],tvecs[i]) # camera marker transform for new marker
+                            if(int(x) not in T_w_m_id): # if it doesent already exist
+                                world_marker_transforms[int(x)]=best_T_w_c@T_c_mn # make noew world marker transform based on known world camera transform
                     if(frame_counter%pose_on==0): # update pose every n frames / ploting
-                        x,y,z,q,ang=matrix_to_pose(T_ros_world@T_w_c[0][0]) # get data from matrix rotated to ros system x->forward, y->right, z->up
-                        x_path.append(x)
-                        y_path.append(y)
-                        z_path.append(z)
-                        q_path.append(q)
-                        ang_path.append(ang)
+                        if(last_pose is not None and np.linalg.norm(last_pose-best_T_w_c)>min_motion): # check how similar is last pose
+                            last_pose=best_T_w_c
+                            x,y,z,q,ang=matrix_to_pose(T_ros_world@best_T_w_c) # get data from matrix rotated to ros system x->forward, y->right, z->up
+                            x_path.append(x)
+                            y_path.append(y)
+                            z_path.append(z)
+                            q_path.append(q)
+                            ang_path.append(ang)
+                        else:
+                            last_pose=best_T_w_c
 
-                        line.set_data(x_path, y_path)
+                        
+                        sc.set_offsets(np.column_stack((x_path, y_path)))
+                        sc.set_array(np.array(z_path))   # Z controls color
+
                         autoscale_with_min(ax, -1, 1, -1, 1)
                         plt.pause(0.001)
                     # print(f"x: {x:.4f} y: {y:.4f} z: {z:.4f}")
