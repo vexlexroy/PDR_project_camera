@@ -26,6 +26,7 @@ Put correct ros distro!
 ```
 sudo apt install ros-<jazzy>-v4l2-camera
 ```
+```
 sudo apt install ros-<jazzy>-camera-calibration
 ```
 
@@ -44,7 +45,6 @@ ros2 run camera_calibration cameracalibrator \
   --square 0.0185 \
   --no-service-check \
   --ros-args -r image:=/image_raw
-
 ```
 Resaults will be saved in '/tmp/calibrationdata.tar.gz'
 
